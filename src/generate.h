@@ -4,34 +4,8 @@
 #include <vector>
 #include <tuple>
 #include <math.h>
-#include "fusion.h"
-using namespace mosek::fusion;
-using namespace monty;
 
 using namespace std;
-
-int factorial(int n)
-{
-    if(n == 0)
-    {
-        return 1;
-    }
-    else
-    {
-        return n * factorial(n - 1);
-    }
-}
-
-int NcR(int n, int r)
-{
-    return factorial(n) / (factorial(r) * factorial(n - r));
-}
-
-int position(int n, int i, int j)
-{
-    int pos = (n*(n-1)/2) - (n-i)*((n-i)-1)/2 + j - i - 1;
-    return pos;
-}
 
 class GenerateProblem
 {

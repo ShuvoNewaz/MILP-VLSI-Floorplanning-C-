@@ -1,0 +1,6 @@
+name: MILP_Floorplan_CPP
+channels:
+  - conda-forge
+dependencies:
+  - numpy==2.1.0
+  - matplotlib==3.9.2

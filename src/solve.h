@@ -1,5 +1,6 @@
 #include"generate.h"
 #include "fusion.h"
+#include"utils.h"
 
 using namespace mosek::fusion;
 using namespace monty;
@@ -59,48 +60,32 @@ class SolveILP
                         {
                             tri_flat = position(num_total_modules, i, j);
                             {
-                                vector<double> A(total_variables);
-                                A[i] = 1; // x_i = 1
-                                A[j] = -1; // x_j = -1
-                                A[y_offset + i] = hard_module_height[i] - hard_module_width[i]; // z_i = h_i - w_i
-                                A[w_offset + tri_flat] = -bound; // x_ij = -bound
-                                A[x_ij_offset + tri_flat] = -bound; // y_ij = -bound
-                                auto Coefficients = new_array_ptr<double>(A);
+                                auto Coefficients = nonOverlapConstraint(total_variables,
+                                                                    i, j, y_offset + i, w_offset + tri_flat, x_ij_offset + tri_flat,
+                                                                    hard_module_height[i] - hard_module_width[i], -bound, -bound);
                                 M->constraint(Expr::dot(Coefficients, X), Domain::lessThan(-hard_module_width[i]));
                             }
                             
                             {
-                                vector<double> A(total_variables);
-                                A[i] = 1; // x_i = 1
-                                A[j] = -1; // x_j = -1
-                                A[y_offset + j] = hard_module_width[j] - hard_module_height[j]; // z_j = - h_j + w_j
-                                A[w_offset + tri_flat] = -bound; // x_ij = -bound
-                                A[x_ij_offset + tri_flat] = bound; // y_ij = bound
-                                auto Coefficients = new_array_ptr<double>(A);
+                                auto Coefficients = nonOverlapConstraint(total_variables,
+                                                                    i, j, y_offset + j, w_offset + tri_flat, x_ij_offset + tri_flat,
+                                                                    hard_module_width[j] - hard_module_height[j], -bound, bound);
                                 M->constraint(Expr::dot(Coefficients, X), Domain::greaterThan(hard_module_width[j] - bound));
                             }
 
                             {
-                                vector<double> A(total_variables);
-                                A[x_offset + i] = 1; // y_i = 1
-                                A[x_offset + j] = -1; // y_j = -1
-                                A[y_offset + i] = hard_module_width[i] - hard_module_height[i]; // z_i = - h_i + w_i
-                                A[w_offset + tri_flat] = -bound; // x_ij = -bound
-                                A[x_ij_offset + tri_flat] = bound; // y_ij = bound
-                                auto Coefficients = new_array_ptr<double>(A);
+                                auto Coefficients = nonOverlapConstraint(total_variables,
+                                                                    x_offset + i, x_offset + j, y_offset + i, w_offset + tri_flat, x_ij_offset + tri_flat,
+                                                                    hard_module_width[i] - hard_module_height[i], -bound, bound);
                                 M->constraint(Expr::dot(Coefficients, X), Domain::lessThan(bound - hard_module_height[i]));
                             }
 
                             {
-                                vector<double> A(total_variables);
-                                A[x_offset + i] = 1; // y_i = 1
-                                A[x_offset + j] = -1; // y_j = -1
-                                A[y_offset + j] = hard_module_height[j] - hard_module_width[j]; // z_j = h_j - w_j
-                                A[w_offset + tri_flat] = -bound; // x_ij = -bound
-                                A[x_ij_offset + tri_flat] = -bound; // y_ij = -bound
-                                auto Coefficients = new_array_ptr<double>(A);
+                                auto Coefficients = nonOverlapConstraint(total_variables,
+                                                                    x_offset + i, x_offset + j, y_offset + j, w_offset + tri_flat, x_ij_offset + tri_flat,
+                                                                    hard_module_height[j] - hard_module_width[j], -bound, -bound);
                                 M->constraint(Expr::dot(Coefficients, X), Domain::greaterThan(hard_module_height[j] - 2 * bound));
-                            }
+                            }                           
                         }
                     }
                 }
@@ -117,47 +102,32 @@ class SolveILP
                         if(j > i)
                         {
                             unsigned short int tri_flat = position(num_total_modules, i, j);
+
                             {
-                                vector<double> A(total_variables);
-                                A[i] = 1; // x_i = 1
-                                A[j] = -1; // x_j = -1
-                                A[y_offset + i] = hard_module_height[i] - hard_module_width[i]; // z_i = h_i - w_i
-                                A[w_offset + tri_flat] = -bound; // x_ij = -bound
-                                A[x_ij_offset + tri_flat] = -bound; // y_ij = -bound
-                                auto Coefficients = new_array_ptr<double>(A);
+                                auto Coefficients = nonOverlapConstraint(total_variables,
+                                                                    i, j, y_offset + i, w_offset + tri_flat, x_ij_offset + tri_flat,
+                                                                    hard_module_height[i] - hard_module_width[i], -bound, -bound);
                                 M->constraint(Expr::dot(Coefficients, X), Domain::lessThan(-hard_module_width[i]));
                             }
 
                             {
-                                vector<double> A(total_variables);
-                                A[i] = 1; // x_i = 1
-                                A[j] = -1; // x_j = -1
-                                A[y_offset + j] = -1; // w_j = -1. Loop starts from num_hard_modules
-                                A[w_offset + tri_flat] = -bound; // x_ij = -bound
-                                A[x_ij_offset + tri_flat] = bound; // y_ij = bound
-                                auto Coefficients = new_array_ptr<double>(A);
+                                auto Coefficients = nonOverlapConstraint(total_variables,
+                                                                    i, j, y_offset + j, w_offset + tri_flat, x_ij_offset + tri_flat,
+                                                                    -1, -bound, bound);
                                 M->constraint(Expr::dot(Coefficients, X), Domain::greaterThan(-bound));
                             }
 
                             {
-                                vector<double> A(total_variables);
-                                A[x_offset + i] = 1; // y_i = 1
-                                A[x_offset + j] = -1; // y_j = -1
-                                A[y_offset + i] = hard_module_width[i] - hard_module_height[i]; // z_i = w_i - h_i
-                                A[w_offset + tri_flat] = -bound; // x_ij = -bound
-                                A[x_ij_offset + tri_flat] = bound; // y_ij = bound
-                                auto Coefficients = new_array_ptr<double>(A);
+                                auto Coefficients = nonOverlapConstraint(total_variables,
+                                                                    x_offset + i, x_offset + j, y_offset + i, w_offset + tri_flat, x_ij_offset + tri_flat,
+                                                                    hard_module_width[i] - hard_module_height[i], -bound, bound);
                                 M->constraint(Expr::dot(Coefficients, X), Domain::lessThan(bound - hard_module_height[i]));
                             }
 
                             {
-                                vector<double> A(total_variables);
-                                A[x_offset + i] = 1; // y_i = 1
-                                A[x_offset + j] = -1; // y_j = -1
-                                A[y_offset + j] = -gradient[j-num_hard_modules]; // w_j = -m_j. Loop starts from num_hard_modules
-                                A[w_offset + tri_flat] = -bound; // x_ij = bound
-                                A[x_ij_offset + tri_flat] = -bound; // y_ij = -bound
-                                auto Coefficients = new_array_ptr<double>(A);
+                                auto Coefficients = nonOverlapConstraint(total_variables,
+                                                                    x_offset + i, x_offset + j, y_offset + j, w_offset + tri_flat, x_ij_offset + tri_flat,
+                                                                    -gradient[j-num_hard_modules], -bound, -bound);
                                 M->constraint(Expr::dot(Coefficients, X), Domain::greaterThan(intercept[j-num_hard_modules] - 2 * bound));
                             }
                         }
@@ -176,47 +146,32 @@ class SolveILP
                         if(j > i)
                         {
                             unsigned short int tri_flat = position(num_total_modules, i, j);
+
                             {
-                                vector<double> A(total_variables);
-                                A[i] = 1; // x_i = 1
-                                A[j] = -1; // x_j = -1
-                                A[y_offset + i] = 1; // w_i = 1. Loop starts from num_hard_modules
-                                A[w_offset + tri_flat] = -bound; // x_ij = -bound
-                                A[x_ij_offset + tri_flat] = -bound; // y_ij = -bound
-                                auto Coefficients = new_array_ptr<double>(A);
+                                auto Coefficients = nonOverlapConstraint(total_variables,
+                                                                    i, j, y_offset + i, w_offset + tri_flat, x_ij_offset + tri_flat,
+                                                                    1, -bound, -bound);
                                 M->constraint(Expr::dot(Coefficients, X), Domain::lessThan(0));
                             }
 
                             {
-                                vector<double> A(total_variables);
-                                A[i] = 1; // x_i = 1
-                                A[j] = -1; // x_j = -1
-                                A[y_offset + j] = -1; // w_j = -1
-                                A[w_offset + tri_flat] = -bound; // x_ij = -bound
-                                A[x_ij_offset + tri_flat] = bound; // y_ij = bound
-                                auto Coefficients = new_array_ptr<double>(A);
+                                auto Coefficients = nonOverlapConstraint(total_variables,
+                                                                    i, j, y_offset + j, w_offset + tri_flat, x_ij_offset + tri_flat,
+                                                                    -1, -bound, bound);
                                 M->constraint(Expr::dot(Coefficients, X), Domain::greaterThan(-bound));
                             }
 
                             {
-                                vector<double> A(total_variables);
-                                A[x_offset + i] = 1; // y_i = 1
-                                A[x_offset + j] = -1; // y_j = -1
-                                A[y_offset + i] = gradient[i-num_hard_modules]; // w_i = m_i. Loop starts from num_hard_modules
-                                A[w_offset + tri_flat] = -bound; // x_ij = -bound
-                                A[x_ij_offset + tri_flat] = bound; // y_ij = bound
-                                auto Coefficients = new_array_ptr<double>(A);
+                                auto Coefficients = nonOverlapConstraint(total_variables,
+                                                                    x_offset + i, x_offset + j, y_offset + i, w_offset + tri_flat, x_ij_offset + tri_flat,
+                                                                    gradient[i-num_hard_modules], -bound, bound);
                                 M->constraint(Expr::dot(Coefficients, X), Domain::lessThan(bound - intercept[i-num_hard_modules]));
                             }
 
                             {
-                                vector<double> A(total_variables);
-                                A[x_offset + i] = 1; // y_i = 1
-                                A[x_offset + j] = -1; // y_j = -1
-                                A[y_offset + j] = -gradient[j-num_hard_modules]; // w_j = -m_j. Loop starts from num_hard_modules
-                                A[w_offset + tri_flat] = -bound; // x_ij = bound
-                                A[x_ij_offset + tri_flat] = -bound; // y_ij = -bound
-                                auto Coefficients = new_array_ptr<double>(A);
+                                auto Coefficients = nonOverlapConstraint(total_variables,
+                                                                    x_offset + i, x_offset + j, y_offset + j, w_offset + tri_flat, x_ij_offset + tri_flat,
+                                                                    -gradient[j-num_hard_modules], -bound, -bound);
                                 M->constraint(Expr::dot(Coefficients, X), Domain::greaterThan(intercept[j-num_hard_modules] - 2 * bound));
                             }
                         }
@@ -228,93 +183,43 @@ class SolveILP
 
             for(unsigned short int i=0; i<num_total_modules; i++)
             {
-                vector<double> A(total_variables);
-                A[i] = 1; // x_i = 1
-                auto Coefficients = new_array_ptr<double>(A);
-                M->constraint(Expr::dot(Coefficients, X), Domain::greaterThan(0)); // x, y >= 0
-            }
-
-            for(unsigned short int i=0; i<num_total_modules; i++)
-            {
-                vector<double> A(total_variables);
-                A[x_offset + i] = 1; // x_i = 1
-                auto Coefficients = new_array_ptr<double>(A);
-                M->constraint(Expr::dot(Coefficients, X), Domain::greaterThan(0)); // x, y >= 0
+                greaterThanZeroConstraint(total_variables, i, M, X);
+                greaterThanZeroConstraint(total_variables, x_offset + i, M, X);
             }
             
             for(unsigned short int i=0; i<num_soft_modules; i++)
             {
-                vector<double> A(total_variables);
                 double w_min = soft_module_width_range[i][0];
                 double w_max = soft_module_width_range[i][1];
-                A[z_offset + i] = 1;
-                auto Coefficients = new_array_ptr<double>(A);
-                M->constraint(Expr::dot(Coefficients, X), Domain::inRange(w_min, w_max)); // w_min <= w_i <= w_max
+                softWidthConstraint(total_variables, z_offset+i, w_min, w_max, M, X);
             }
 
             for(unsigned short int i=0; i<NcR(num_total_modules, 2); i++)
             {
-                vector<double> A(total_variables);
-                A[w_offset + i] = 1; // x_ij = 1
-                auto Coefficients = new_array_ptr<double>(A);
-                M->constraint(Expr::dot(Coefficients, X), Domain::inRange(0, 1)); // 0 <= x_ij <= 1
-            }
-
-            for(unsigned short int i=0; i<NcR(num_total_modules, 2); i++)
-            {
-                vector<double> A(total_variables);
-                A[x_ij_offset + i] = 1; // y_ij = 1
-                auto Coefficients = new_array_ptr<double>(A);
-                M->constraint(Expr::dot(Coefficients, X), Domain::inRange(0, 1)); // 0 <= y_ij <= 1
+                binaryConstraint(total_variables, w_offset+i, M, X);
+                binaryConstraint(total_variables, x_ij_offset+i, M, X);
             }
 
             if(problem.hard_exists)
             {
                 for(unsigned short int i=0; i < num_hard_modules; i++)
                 {
-                    vector<double> A(total_variables);
-                    A[y_offset + i] = 1; // z_i = 1
-                    auto Coefficients = new_array_ptr<double>(A);
-                    M->constraint(Expr::dot(Coefficients, X), Domain::inRange(0, 1)); // 0 <= z_i <= 1
+                    binaryConstraint(total_variables, y_offset+i, M, X);
                 }
-
-                // Chip width constraint
 
                 for(unsigned short int i=0; i < num_hard_modules; i++)
                 {
-                    vector<double> A(total_variables);
-                    A[i] = 1; // x_i = 1
-                    A[y_offset + i] = hard_module_height[i] - hard_module_width[i]; // z_i = h_i - w_i
-                    A[A.size() - 1] = -1; // Y = -1
-                    auto Coefficients = new_array_ptr<double>(A);
-                    M->constraint(Expr::dot(Coefficients, X), Domain::lessThan(-hard_module_width[i]));
-                }
-
-                // Chip height constraint
-
-                for(unsigned short int i=0; i <num_hard_modules; i++)
-                {
-                    vector<double> A(total_variables);
-                    A[x_offset + i] = 1; // y_i = 1
-                    A[y_offset + i] = hard_module_width[i] - hard_module_height[i]; // z_i = w_i - h_i
-                    A[A.size() - 1] = -1; // Y = -1
-                    auto Coefficients = new_array_ptr<double>(A);
-                    M->constraint(Expr::dot(Coefficients, X), Domain::lessThan(-hard_module_height[i]));
+                    chipDimensionConstraint(total_variables, i, y_offset+i, hard_module_height[i], hard_module_width[i], M, X); // Chip width constraint
+                    chipDimensionConstraint(total_variables, x_offset+i, y_offset+i, hard_module_width[i], hard_module_height[i], M, X); // Chip height constraint
                 }
             }
             if(problem.soft_exists)
             {
                 for(unsigned short int i=num_hard_modules; i <num_total_modules; i++)
                 {
-                    vector<double> A(total_variables);
-                    A[i] = 1; // x_i = 1
-                    A[y_offset + i] = 1; // w_i = 1
-                    A[A.size() - 1] = -1; // Y = -1
-                    auto Coefficients = new_array_ptr<double>(A);
-                    M->constraint(Expr::dot(Coefficients, X), Domain::lessThan(0));
+                    chipDimensionConstraint(total_variables, i, y_offset+i, 1, 0, M, X);
                 }
 
-                for(unsigned short int i=num_hard_modules; i <num_total_modules; i++)
                 {
                     vector<double> A(total_variables);
                     A[x_offset + i] = 1; // y_i = 1
@@ -327,10 +232,9 @@ class SolveILP
             
         }
 
-        tuple<float, vector<float>, vector<float>, vector<int>, vector<float>, vector<float>> solve(float run_time)
+        tuple<float, vector<float>, vector<float>, vector<float>, vector<float>, vector<float>> solve(float run_time)
         {
-            vector<float> x_i, y_i, w_i, h_i;
-            vector<int> z_i;
+            vector<float> x_i, y_i, w_i, h_i, z_i;
             float Y;           
             unsigned short int total_variables = 3 * num_total_modules + 2 * NcR(num_total_modules, 2) + 1;
 
@@ -392,7 +296,11 @@ class SolveILP
             return make_tuple(Y, x_i, y_i, z_i, w_i, h_i);
         }
 
-        tuple<vector<float>, vector<float>> visualize(float Y, vector<float> x_i, vector<float>y_i, vector<int> z_i, vector<float>w_i, vector<float>h_i)
+        void export_results(float Y, vector<float> x_i, vector<float>y_i, vector<float> z_i, vector<float> w_i, vector<float> h_i)
+        /*
+            Exports the dimensions and coordinates of the optimized blocks to a text file. The results can
+            later be read and plotted using Python.
+        */
         {
             unsigned short int i;
             vector<float> W, H;
@@ -414,7 +322,23 @@ class SolveILP
             float chip_area = pow(Y, 2);
             utilization = (utilization / chip_area);
 
-            return make_tuple(W, H);
+            ofstream output_file;
+            string output_file_name = "results/" + to_string(num_total_modules) + "_results.txt";
+            output_file.open(output_file_name, ios::out);
+            if(output_file.is_open())
+            {   
+                output_file << to_string(num_hard_modules) + "\n";
+                output_file << to_string(num_soft_modules) + "\n";
+                writeFile(output_file, x_i, num_total_modules);
+                writeFile(output_file, y_i, num_total_modules);
+                writeFile(output_file, W, num_total_modules);
+                writeFile(output_file, H, num_total_modules);
+                writeFile(output_file, z_i, num_hard_modules);
+                output_file << to_string(utilization) + "\n";
+                output_file << to_string(Y) + "\n";
+            }
+            
+            output_file.close();
         }
 };
 
@@ -441,18 +365,4 @@ SolveILP::SolveILP(string fname, int n, bool u) : problem(fname, n, u)
         {
             h.push_back(0);
         }
-
-        // Populate the optimization model and variables
-
-        // unsigned short int total_variables = 3 * num_total_modules + 2 * NcR(num_total_modules, 2) + 1;
-
-        // M = new Model("Floorplan_Optimization");
-
-        // auto _M = finally([&]() { M->dispose(); });
-
-        // X = M->variable(total_variables, Domain::inRange(0, bound));
-        // X->slice(2 * num_total_modules, 2 * num_total_modules + num_hard_modules)->makeInteger(); // z_i are binary
-        // X->slice(3 * num_total_modules, total_variables - 1)->makeInteger(); // x_ij and y_ij are binary
-        // SolveILP::create_constraints();
-
     }
