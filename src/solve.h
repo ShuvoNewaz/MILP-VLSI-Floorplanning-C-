@@ -95,13 +95,13 @@ class SolveILP
 
             if(problem.hard_exists && problem.soft_exists)
             {
-                for(unsigned short int i=0; i<num_hard_modules; i++)
+                for(i=0; i<num_hard_modules; i++)
                 {
-                    for(unsigned short int j=num_hard_modules; j<num_total_modules; j++)
+                    for(j=num_hard_modules; j<num_total_modules; j++)
                     {
                         if(j > i)
                         {
-                            unsigned short int tri_flat = position(num_total_modules, i, j);
+                            tri_flat = position(num_total_modules, i, j);
 
                             {
                                 auto Coefficients = nonOverlapConstraint(total_variables,
@@ -139,13 +139,13 @@ class SolveILP
 
             if(problem.soft_exists)
             {
-                for(unsigned short int i=num_hard_modules; i<num_total_modules; i++)
+                for(i=num_hard_modules; i<num_total_modules; i++)
                 {
-                    for(unsigned short int j=num_hard_modules; j<num_total_modules; j++)
+                    for(j=num_hard_modules; j<num_total_modules; j++)
                     {
                         if(j > i)
                         {
-                            unsigned short int tri_flat = position(num_total_modules, i, j);
+                            tri_flat = position(num_total_modules, i, j);
 
                             {
                                 auto Coefficients = nonOverlapConstraint(total_variables,
@@ -181,20 +181,20 @@ class SolveILP
 
             // Variable type constraints
 
-            for(unsigned short int i=0; i<num_total_modules; i++)
+            for(i=0; i<num_total_modules; i++)
             {
                 greaterThanZeroConstraint(total_variables, i, M, X);
                 greaterThanZeroConstraint(total_variables, x_offset + i, M, X);
             }
             
-            for(unsigned short int i=0; i<num_soft_modules; i++)
+            for(i=0; i<num_soft_modules; i++)
             {
                 double w_min = soft_module_width_range[i][0];
                 double w_max = soft_module_width_range[i][1];
                 softWidthConstraint(total_variables, z_offset+i, w_min, w_max, M, X);
             }
 
-            for(unsigned short int i=0; i<NcR(num_total_modules, 2); i++)
+            for(i=0; i<NcR(num_total_modules, 2); i++)
             {
                 binaryConstraint(total_variables, w_offset+i, M, X);
                 binaryConstraint(total_variables, x_ij_offset+i, M, X);
@@ -202,12 +202,12 @@ class SolveILP
 
             if(problem.hard_exists)
             {
-                for(unsigned short int i=0; i < num_hard_modules; i++)
+                for(i=0; i < num_hard_modules; i++)
                 {
                     binaryConstraint(total_variables, y_offset+i, M, X);
                 }
 
-                for(unsigned short int i=0; i < num_hard_modules; i++)
+                for(i=0; i<num_hard_modules; i++)
                 {
                     chipDimensionConstraint(total_variables, i, y_offset+i, hard_module_height[i], hard_module_width[i], M, X); // Chip width constraint
                     chipDimensionConstraint(total_variables, x_offset+i, y_offset+i, hard_module_width[i], hard_module_height[i], M, X); // Chip height constraint
@@ -215,19 +215,29 @@ class SolveILP
             }
             if(problem.soft_exists)
             {
-                for(unsigned short int i=num_hard_modules; i <num_total_modules; i++)
+                for(i=num_hard_modules; i<num_total_modules; i++)
                 {
-                    chipDimensionConstraint(total_variables, i, y_offset+i, 1, 0, M, X);
-                }
+                    {
+                        vector<double> A(total_variables);
+                        A[i] = 1; // x_i = 1
+                        A[y_offset + i] = 1; // w_i = 1
+                        A[A.size() - 1] = -1; // Y = -1
+                        auto Coefficients = new_array_ptr<double>(A);
+                        M->constraint(Expr::dot(Coefficients, X), Domain::lessThan(0));
+                    }
 
-                {
-                    vector<double> A(total_variables);
-                    A[x_offset + i] = 1; // y_i = 1
-                    A[y_offset + i] = gradient[i-num_hard_modules]; // w_i = m_i
-                    A[A.size() - 1] = -1; // Y = -1
-                    auto Coefficients = new_array_ptr<double>(A);
-                    M->constraint(Expr::dot(Coefficients, X), Domain::lessThan(-intercept[i-num_hard_modules]));
+                    {
+                        vector<double> A(total_variables);
+                        A[x_offset + i] = 1; // y_i = 1
+                        A[y_offset + i] = gradient[i-num_hard_modules]; // w_i = m_i
+                        A[A.size() - 1] = -1; // Y = -1
+                        auto Coefficients = new_array_ptr<double>(A);
+                        M->constraint(Expr::dot(Coefficients, X), Domain::lessThan(-intercept[i-num_hard_modules]));
+                    }
                 }
+                
+
+                
             }
             
         }
@@ -297,7 +307,7 @@ class SolveILP
             return make_tuple(Y, x_i, y_i, z_i, w_i, h_i);
         }
 
-        void export_results(float Y, vector<float> x_i, vector<float>y_i, vector<float> z_i, vector<float> w_i, vector<float> h_i, string output_file_name)
+        float export_results(float Y, vector<float> x_i, vector<float>y_i, vector<float> z_i, vector<float> w_i, vector<float> h_i, vector<float> utilizations, string output_file_name)
         /*
             Exports the dimensions and coordinates of the optimized blocks to a text file. The results can
             later be read and plotted using Python.
@@ -317,14 +327,17 @@ class SolveILP
             {
                 W.push_back(w_i[i]);
                 H.push_back(h_i[i]);
-                utilization += W[i] * H[i];
+                utilization += W[i+num_hard_modules] * H[i+num_hard_modules];
+            }
+            for(i=0; i<utilizations.size(); i++)
+            {
+                utilization *= utilizations[i];
             }
             
             float chip_area = pow(Y, 2);
             utilization = (utilization / chip_area);
 
             ofstream output_file;
-            // string output_file_name = "results/" + to_string(num_total_modules) + "_results.txt";
             output_file.open(output_file_name, ios::out);
             if(output_file.is_open())
             {   
@@ -340,13 +353,15 @@ class SolveILP
                 }
                 else
                 {
-                    output_file << "\n";
+                    output_file << "0\n";
                 }
                 output_file << to_string(utilization) + "\n";
                 output_file << to_string(Y) + "\n";
             }
             
             output_file.close();
+
+            return utilization;
         }
 };
 

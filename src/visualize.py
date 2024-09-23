@@ -15,6 +15,7 @@ parser.add_argument('--glob', type=boolean_string, default=False)
 parser.add_argument('--sa', type=boolean_string, default=False)
 parser.add_argument('-show', '--show_layout', type=boolean_string, default=False)
 parser.add_argument('-f', '--file', type=str)
+parser.add_argument('-idx', '--index', type=int)
 args = parser.parse_args()
 
 
@@ -27,8 +28,8 @@ def str2int(str_list):
     return [int(string) for string in str_list]
 
 
-def visualize(file, idx=1):
-    glob, sa, show_layout = args.glob, args.sa, args.show_layout
+def visualize(file):
+    glob, sa, show_layout, idx = args.glob, args.sa, args.show_layout, args.index
     values = []
     with open(file) as f:
         for line in f:
@@ -43,8 +44,6 @@ def visualize(file, idx=1):
     Z = str2float(values[6])
     utilization = str2float(values[7])[0]
     bound = str2float(values[8])[0]
-    print(values)
-
     
     label = np.arange(num_total_modules) + 1
     plt.ion()
@@ -77,3 +76,5 @@ def visualize(file, idx=1):
         plt.show(block=True)
     else:
         plt.close()
+
+visualize(args.file)

@@ -152,7 +152,7 @@ class Augment
                 {
                     modules_in_subblock = minimum(sub_block_size, num_total_modules - i * sub_block_size);
                     hard_left = num_hard_modules - sub_block_size*i;
-                    if(hard_left > modules_in_subblock)
+                    if(hard_left >= modules_in_subblock)
                     {
                         g.open(sa_file_prefix + "/" + to_string(num_blocks) + "_" + to_string(i+1) + ".ilp", ios::out);
                         g << "hard - " + to_string(modules_in_subblock) + "\n";
