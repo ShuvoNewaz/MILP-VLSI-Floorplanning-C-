@@ -252,7 +252,7 @@ class SolveILP
 
             // Set max solution time
 
-            M->setSolverParam("mioMaxTime", run_time);
+            M->setSolverParam("optimizerMaxTime", run_time);
 
             // Set max relative gap (to its default value)
 
@@ -260,18 +260,19 @@ class SolveILP
 
             // Set max absolute gap (to its default value)
 
-            M->setSolverParam("mioTolAbsGap", 0.0);
+            M->setSolverParam("mioTolAbsGap", 0.1);
 
             vector<double> A(total_variables);
             A[A.size() - 1] = 1; // Set up the objective
             auto Coefficients = new_array_ptr<double>(A);
-            cout << "HERE";
             M->objective("Objective", ObjectiveSense::Minimize, Expr::dot(Coefficients, X));
             M->writeTask("VLSI.ptf");
-            M->setLogHandler([=](const std::string & msg) { std::cout << msg << std::flush; } );
+            // M->setLogHandler([=](const std::string & msg) { std::cout << msg << std::flush; } ); // Uncomment to see details
+            M->acceptedSolutionStatus(AccSolutionStatus::Feasible); // Otherwise the time limit will yield an error
             M->solve();
+            
+            cout << M->getPrimalSolutionStatus();
 
-            cout << M->getPrimalSolutionStatus() << endl;
 
             // Get all the parameter values
             
@@ -296,7 +297,7 @@ class SolveILP
             return make_tuple(Y, x_i, y_i, z_i, w_i, h_i);
         }
 
-        void export_results(float Y, vector<float> x_i, vector<float>y_i, vector<float> z_i, vector<float> w_i, vector<float> h_i)
+        void export_results(float Y, vector<float> x_i, vector<float>y_i, vector<float> z_i, vector<float> w_i, vector<float> h_i, string output_file_name)
         /*
             Exports the dimensions and coordinates of the optimized blocks to a text file. The results can
             later be read and plotted using Python.
@@ -323,7 +324,7 @@ class SolveILP
             utilization = (utilization / chip_area);
 
             ofstream output_file;
-            string output_file_name = "results/" + to_string(num_total_modules) + "_results.txt";
+            // string output_file_name = "results/" + to_string(num_total_modules) + "_results.txt";
             output_file.open(output_file_name, ios::out);
             if(output_file.is_open())
             {   
@@ -333,7 +334,14 @@ class SolveILP
                 writeFile(output_file, y_i, num_total_modules);
                 writeFile(output_file, W, num_total_modules);
                 writeFile(output_file, H, num_total_modules);
-                writeFile(output_file, z_i, num_hard_modules);
+                if(problem.hard_exists)
+                {
+                    writeFile(output_file, z_i, num_hard_modules);
+                }
+                else
+                {
+                    output_file << "\n";
+                }
                 output_file << to_string(utilization) + "\n";
                 output_file << to_string(Y) + "\n";
             }

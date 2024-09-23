@@ -1,6 +1,21 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
+import argparse
+
+
+def boolean_string(s):
+    if s not in {'False', 'True'}:
+        raise ValueError('Not a valid boolean string')
+    
+    return s == 'True'
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--glob', type=boolean_string, default=False)
+parser.add_argument('--sa', type=boolean_string, default=False)
+parser.add_argument('-show', '--show_layout', type=boolean_string, default=False)
+parser.add_argument('-f', '--file', type=str)
+args = parser.parse_args()
 
 
 def str2float(str_list):
@@ -12,7 +27,8 @@ def str2int(str_list):
     return [int(string) for string in str_list]
 
 
-def visualize(file, idx=1, glob=False, sa=False, show_layout=True):
+def visualize(file, idx=1):
+    glob, sa, show_layout = args.glob, args.sa, args.show_layout
     values = []
     with open(file) as f:
         for line in f:
@@ -27,6 +43,7 @@ def visualize(file, idx=1, glob=False, sa=False, show_layout=True):
     Z = str2float(values[6])
     utilization = str2float(values[7])[0]
     bound = str2float(values[8])[0]
+    print(values)
 
     
     label = np.arange(num_total_modules) + 1

@@ -10,8 +10,8 @@ using namespace std;
 class GenerateProblem
 {
     public:
-        bool hard_exists;
-        bool soft_exists;
+        bool hard_exists{false};
+        bool soft_exists{false};
         unsigned short int num_hard_modules, num_soft_modules, num_total_modules;
         vector<float> hard_module_width, hard_module_height;
         vector<float> area, min_aspect, max_aspect;
@@ -20,10 +20,11 @@ class GenerateProblem
         float bound;
 
         string file;
+        string lp_solve_files_dir;
         int num_blocks;
         bool underestimation;
         vector<string> lines;
-        string output {"constraints.lp"};
+        string output;
         ofstream constraint_file;
 
         GenerateProblem(string, int, bool); // Constructor is defined outside the class
@@ -102,8 +103,8 @@ class GenerateProblem
 
         tuple<vector<float>, vector<float>, vector<float>> soft_module_properties()
         /*
-            Returns a 2-d array (vector) containing the properties
-            (area, minimum aspect ration, maximum aspect ration)
+            Returns a tuple containing the properties
+            (area, minimum aspect ratio, maximum aspect ratio)
             of the soft modules.
         */
         {
@@ -492,6 +493,7 @@ class GenerateProblem
 
         void create_ilp_file()
         {
+            system(("mkdir -p " + lp_solve_files_dir).c_str());
             objective();
             hard_hard_nonoverlap();
             hard_soft_nonoverlap();
@@ -529,4 +531,6 @@ GenerateProblem::GenerateProblem(string fname, int n, bool u=true)
         tie(soft_module_width_range, soft_module_height_range) = soft_module_dimension_range();
         tie(gradient, intercept) = linear_approximation();
         bound = upper_bound();
+        lp_solve_files_dir = "lp_solve_files/" + to_string(num_blocks) + "/";
+        output = lp_solve_files_dir + to_string(num_total_modules) + "_blocks_constraints.lp";
     }
