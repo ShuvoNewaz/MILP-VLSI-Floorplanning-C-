@@ -19,9 +19,7 @@ class GenerateProblem
         vector<float> gradient, intercept;
         float bound;
 
-        string file;
         string lp_solve_files_dir;
-        int num_blocks;
         bool underestimation;
         vector<string> lines;
         string output;
@@ -507,10 +505,8 @@ class GenerateProblem
 
 // Create constructor for GenerateProblem
 
-GenerateProblem::GenerateProblem(string fname, int n, bool u=true)
+GenerateProblem::GenerateProblem(string file, int num_blocks, bool u)
     {
-        file = fname;
-        num_blocks = n;
         underestimation = u;
         ifstream f; // Read file contents into f
         f.open(file);

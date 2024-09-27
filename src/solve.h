@@ -9,9 +9,6 @@ using namespace monty;
 class SolveILP
 {
     public:
-        string file;
-        int num_blocks;
-        bool underestimation;
         GenerateProblem problem;
         short unsigned int num_hard_modules, num_soft_modules, num_total_modules;
 
@@ -242,7 +239,7 @@ class SolveILP
             
         }
 
-        tuple<float, vector<float>, vector<float>, vector<float>, vector<float>, vector<float>> solve(float run_time)
+        tuple<float, vector<float>, vector<float>, vector<float>, vector<float>, vector<float>> solve(float run_time, bool sub_module)
         {
             vector<float> x_i, y_i, w_i, h_i, z_i;
             float Y;           
@@ -278,7 +275,11 @@ class SolveILP
             M->objective("Objective", ObjectiveSense::Minimize, Expr::dot(Coefficients, X));
             M->writeTask("VLSI.ptf");
             // M->setLogHandler([=](const std::string & msg) { std::cout << msg << std::flush; } ); // Uncomment to see details
-            M->acceptedSolutionStatus(AccSolutionStatus::Feasible); // Otherwise the time limit will yield an error
+            if(sub_module)
+            {
+                M->acceptedSolutionStatus(AccSolutionStatus::Feasible); // Otherwise the time limit will yield an error
+            }
+            
             M->solve();
             
             cout << M->getPrimalSolutionStatus();
@@ -367,12 +368,8 @@ class SolveILP
 
 // Create constructor for SolveILP
 
-SolveILP::SolveILP(string fname, int n, bool u) : problem(fname, n, u)
+SolveILP::SolveILP(string file, int num_blocks, bool underestimation) : problem(file, num_blocks, underestimation)
     {
-        file = fname;
-        num_blocks = n;
-        underestimation = u;
-        problem.total_modules(); // Determines the individual and total number of modules
         num_hard_modules = problem.num_hard_modules;
         num_soft_modules = problem.num_soft_modules;
         num_total_modules = problem.num_total_modules;

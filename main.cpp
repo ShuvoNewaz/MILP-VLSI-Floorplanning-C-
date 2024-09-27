@@ -10,10 +10,15 @@ string printBool(bool Bool)
     return out;
 }
 
-int main()
+bool parseBool(string Bool)
 {
-    int num_blocks{30}, sub_block_size{8}, num_augmentations, i;
-    bool underestimation{true}, successive_augmentation{true}, visualize_superblock{true};
+    return (Bool == "true" || Bool == "True");
+}
+
+int main(int argc, char *argv[])
+{
+    int num_blocks{stoi(argv[1])}, sub_block_size{stoi(argv[6])}, num_augmentations, i;
+    bool underestimation{parseBool(argv[2])}, successive_augmentation{parseBool(argv[3])}, visualize_superblock{parseBool(argv[5])};
     float runtime{2};
     string src_file_path;
     string spec_files_dir = "spec_files/";
@@ -27,6 +32,12 @@ int main()
     float utilization;
     if(successive_augmentation)
     {   
+        if(sub_block_size > num_blocks)
+        {
+            cerr << "Error: Sub-block size exceeds the total number of blocks.\n";
+            return -1;
+        }
+
         num_augmentations = int(ceil(float(num_blocks) / float(sub_block_size)));
         vector<float> final_dimensions;
         
@@ -42,7 +53,7 @@ int main()
             SolveILP problem = SolveILP(src_file_path, sub_block_size, underestimation);
             vector<float>x_i, y_i, z_i, w_i, h_i;
             float Y;
-            tie(Y, x_i, y_i, z_i, w_i, h_i) = problem.solve(runtime);
+            tie(Y, x_i, y_i, z_i, w_i, h_i) = problem.solve(runtime, true);
             final_dimensions.push_back(Y);
             string output_file_name = result_dir + to_string(num_blocks) + "_" + to_string(i) + ".txt";
             utilization = problem.export_results(Y, x_i, y_i, z_i, w_i, h_i, {1}, output_file_name);
@@ -67,7 +78,7 @@ int main()
     SolveILP problem = SolveILP(src_file_path, sub_block_size, underestimation);
     vector<float>x_i, y_i, z_i, w_i, h_i;
     float Y;
-    tie(Y, x_i, y_i, z_i, w_i, h_i) = problem.solve(runtime);
+    tie(Y, x_i, y_i, z_i, w_i, h_i) = problem.solve(runtime, false);
     string output_file_name = result_dir + to_string(num_blocks) + "_sa_" + printBool(successive_augmentation) + ".txt";
     utilization = problem.export_results(Y, x_i, y_i, z_i, w_i, h_i, utilizations, output_file_name);
     cout << utilization;
